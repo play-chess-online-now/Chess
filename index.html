@@ -675,7 +675,6 @@
         </div>
     </div>
 </div>
-
 <!-- PeerJS -->
 <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
 
@@ -1259,7 +1258,9 @@
     function renderBoard() {
         const boardDiv = document.getElementById('chessBoard');
         boardDiv.innerHTML = '';
-        const isMyTurn = !isGameOver;
+
+        // ✅ TYLKO jeśli to moja tura i mój kolor – mogę klikać
+        const canPlayNow = !isGameOver && gameState && myColor && gameState.currentTurn === myColor;
 
         for (let displayRow = 0; displayRow < 8; displayRow++) {
             for (let displayCol = 0; displayCol < 8; displayCol++) {
@@ -1287,7 +1288,7 @@
                     }
                 }
 
-                if (isMyTurn) {
+                if (canPlayNow) {
                     square.onclick = () => handleSquareClick(row, col);
                 } else {
                     square.classList.add('no-hover');
@@ -1299,16 +1300,8 @@
     }
 
     function handleSquareClick(row, col) {
-        if (isGameOver) {
-            if (lastWinnerName) {
-                if (currentPlayer === lastWinnerName) {
-                    showStatus('This game is already won. You can offer a rematch or leave the game.');
-                } else {
-                    showStatus('This game is already lost. Wait for a rematch offer or leave the game.', true);
-                }
-            } else {
-                showStatus('This game is already finished.', true);
-            }
+        // ✅ TWARDY WARUNEK: jeśli to nie moja tura / kolor – ignoruj
+        if (!gameState || isGameOver || !myColor || gameState.currentTurn !== myColor) {
             return;
         }
 
@@ -1338,9 +1331,9 @@
         const blackPieces = Object.values(pieces.black);
 
         if (gameState.currentTurn === 'white') {
-            return whitePieces.includes(piece);
+            return whitePieces.includes(piece) && myColor === 'white';
         } else {
-            return blackPieces.includes(piece);
+            return blackPieces.includes(piece) && myColor === 'black';
         }
     }
 
