@@ -649,32 +649,32 @@
 
         <div id="statusMessage" class="status-message hidden"></div>
     </div>
-</div>
-
-<!-- WINNER MODAL -->
-<div id="winnerOverlay" class="modal-overlay hidden">
-    <div class="modal">
-        <h2>🎉 Congratulations!</h2>
-        <p>You won this game. You can offer a rematch to your opponent.</p>
-        <div class="modal-buttons">
-            <button class="modal-btn modal-btn-primary" onclick="sendRematchOffer()">Offer rematch</button>
-            <button class="modal-btn modal-btn-secondary" onclick="closeWinnerModal()">Close</button>
+    <!-- WINNER MODAL -->
+    <div id="winnerOverlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2>🎉 Congratulations!</h2>
+            <p>You won this game. You can offer a rematch to your opponent.</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="sendRematchOffer()">Offer rematch</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeWinnerModal()">Close</button>
+            </div>
+            <div id="winnerModalInfo" class="modal-info"></div>
         </div>
-        <div id="winnerModalInfo" class="modal-info"></div>
+    </div>
+
+    <!-- LOSER MODAL -->
+    <div id="loserOverlay" class="modal-overlay hidden">
+        <div class="modal">
+            <h2>Good game!</h2>
+            <p>You lost this game, but your opponent offers a rematch. Do you want to play again?</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="respondRematch(true)">Yes, play again</button>
+                <button class="modal-btn modal-btn-secondary" onclick="respondRematch(false)">No, I'm done</button>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- LOSER MODAL -->
-<div id="loserOverlay" class="modal-overlay hidden">
-    <div class="modal">
-        <h2>Good game!</h2>
-        <p>You lost this game, but your opponent offers a rematch. Do you want to play again?</p>
-        <div class="modal-buttons">
-            <button class="modal-btn modal-btn-primary" onclick="respondRematch(true)">Yes, play again</button>
-            <button class="modal-btn modal-btn-secondary" onclick="respondRematch(false)">No, I'm done</button>
-        </div>
-    </div>
-</div>
 <!-- PeerJS -->
 <script src="https://unpkg.com/peerjs@1.5.1/dist/peerjs.min.js"></script>
 
@@ -1259,7 +1259,6 @@
         const boardDiv = document.getElementById('chessBoard');
         boardDiv.innerHTML = '';
 
-        // ✅ TYLKO jeśli to moja tura i mój kolor – mogę klikać
         const canPlayNow = !isGameOver && gameState && myColor && gameState.currentTurn === myColor;
 
         for (let displayRow = 0; displayRow < 8; displayRow++) {
@@ -1300,12 +1299,21 @@
     }
 
     function handleSquareClick(row, col) {
-        // ✅ TWARDY WARUNEK: jeśli to nie moja tura / kolor – ignoruj
-        if (!gameState || isGameOver || !myColor || gameState.currentTurn !== myColor) {
+        if (!gameState || isGameOver) return;
+
+        // ❗ BLOKADA: jeśli to nie moja tura → nic nie rób
+        if (gameState.currentTurn !== myColor) return;
+
+        const piece = gameState.board[row][col];
+
+        // ❗ BLOKADA: nie mogę klikać figur przeciwnika
+        if (piece && !canSelectPiece(piece)) {
+            selectedSquare = null;
+            possibleMoves = [];
+            renderBoard();
             return;
         }
 
-        const piece = gameState.board[row][col];
         const isPossibleMove = possibleMoves.some(m => m.row === row && m.col === col);
 
         if (isPossibleMove && selectedSquare) {
@@ -1336,7 +1344,6 @@
             return blackPieces.includes(piece) && myColor === 'black';
         }
     }
-
     function makeMove(fromRow, fromCol, toRow, toCol) {
         if (isGameOver) return;
         const piece = gameState.board[fromRow][fromCol];
