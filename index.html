@@ -1300,22 +1300,12 @@
 
     function handleSquareClick(row, col) {
         if (!gameState || isGameOver) return;
-
-        // ❗ BLOKADA: jeśli to nie moja tura → nic nie rób
         if (gameState.currentTurn !== myColor) return;
 
         const piece = gameState.board[row][col];
-
-        // ❗ BLOKADA: nie mogę klikać figur przeciwnika
-        if (piece && !canSelectPiece(piece)) {
-            selectedSquare = null;
-            possibleMoves = [];
-            renderBoard();
-            return;
-        }
-
         const isPossibleMove = possibleMoves.some(m => m.row === row && m.col === col);
 
+        // Jeśli kliknięto możliwy ruch (w tym bicie)
         if (isPossibleMove && selectedSquare) {
             makeMove(selectedSquare.row, selectedSquare.col, row, col);
             selectedSquare = null;
@@ -1323,11 +1313,13 @@
             return;
         }
 
+        // Jeśli kliknięto własną figurę - zaznacz ją
         if (piece && canSelectPiece(piece)) {
             selectedSquare = { row, col };
             possibleMoves = getPossibleMoves(row, col, piece);
             renderBoard();
         } else {
+            // Kliknięto puste pole lub figurę przeciwnika (nie w ramach możliwego ruchu)
             selectedSquare = null;
             possibleMoves = [];
             renderBoard();
@@ -1338,12 +1330,13 @@
         const whitePieces = Object.values(pieces.white);
         const blackPieces = Object.values(pieces.black);
 
-        if (gameState.currentTurn === 'white') {
-            return whitePieces.includes(piece) && myColor === 'white';
+        if (myColor === 'white') {
+            return whitePieces.includes(piece);
         } else {
-            return blackPieces.includes(piece) && myColor === 'black';
+            return blackPieces.includes(piece);
         }
     }
+
     function makeMove(fromRow, fromCol, toRow, toCol) {
         if (isGameOver) return;
         const piece = gameState.board[fromRow][fromCol];
