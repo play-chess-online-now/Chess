@@ -316,7 +316,6 @@
             margin: 20px 0;
         }
 
-        /* ZEGAR PO LEWEJ STRONIE PLANSZY */
         .side-clock {
             display: flex;
             flex-direction: column;
@@ -987,20 +986,12 @@
             if (gameState.currentTurn === 'white') {
                 whiteInfo.classList.add('active');
                 blackInfo.classList.remove('active');
-                if (myColor === 'white' && !isGameOver) {
-                    whiteIndicator.classList.remove('hidden');
-                } else {
-                    whiteIndicator.classList.add('hidden');
-                }
+                whiteIndicator.classList.remove('hidden');
                 blackIndicator.classList.add('hidden');
             } else {
                 blackInfo.classList.add('active');
                 whiteInfo.classList.remove('active');
-                if (myColor === 'black' && !isGameOver) {
-                    blackIndicator.classList.remove('hidden');
-                } else {
-                    blackIndicator.classList.add('hidden');
-                }
+                blackIndicator.classList.remove('hidden');
                 whiteIndicator.classList.add('hidden');
             }
 
@@ -1016,7 +1007,6 @@
                 blackClockEl.className = 'clock clock-disabled';
             }
 
-            // side clocks
             const sideWhite = document.getElementById('sideClockWhite');
             const sideBlack = document.getElementById('sideClockBlack');
             if (timedGame) {
@@ -1052,25 +1042,26 @@
         function renderBoard() {
             const boardDiv = document.getElementById('chessBoard');
             boardDiv.innerHTML = '';
-            const isMyTurn = gameState.currentTurn === myColor && !isGameOver;
+            const isMyTurn = !isGameOver; // ZAWSZE pozwalamy klikać, logika koloru jest w canSelectPiece
+
             for (let displayRow = 0; displayRow < 8; displayRow++) {
                 for (let displayCol = 0; displayCol < 8; displayCol++) {
                     const { row, col } = toRealCoords(displayRow, displayCol);
                     const square = document.createElement('div');
                     square.className = 'square';
                     square.className += (displayRow + displayCol) % 2 === 0 ? ' light' : ' dark';
-                    if (!isMyTurn) {
-                        square.classList.add('no-hover');
-                    }
+
                     const piece = gameState.board[row][col];
                     if (piece) {
                         const isWhitePiece = Object.values(pieces.white).includes(piece);
                         const pieceColorClass = isWhitePiece ? 'white' : 'black';
                         square.innerHTML = `<span class="piece ${pieceColorClass}">${piece}</span>`;
                     }
+
                     if (selectedSquare && selectedSquare.row === row && selectedSquare.col === col) {
                         square.classList.add('selected');
                     }
+
                     const isPossibleMove = possibleMoves.some(m => m.row === row && m.col === col);
                     if (isPossibleMove) {
                         square.classList.add('possible-move');
@@ -1078,9 +1069,13 @@
                             square.classList.add('possible-capture');
                         }
                     }
+
                     if (isMyTurn) {
                         square.onclick = () => handleSquareClick(row, col);
+                    } else {
+                        square.classList.add('no-hover');
                     }
+
                     boardDiv.appendChild(square);
                 }
             }
@@ -1099,14 +1094,17 @@
                 }
                 return;
             }
+
             const piece = gameState.board[row][col];
             const isPossibleMove = possibleMoves.some(m => m.row === row && m.col === col);
+
             if (isPossibleMove && selectedSquare) {
                 makeMove(selectedSquare.row, selectedSquare.col, row, col);
                 selectedSquare = null;
                 possibleMoves = [];
                 return;
             }
+
             if (piece && canSelectPiece(piece)) {
                 selectedSquare = { row, col };
                 possibleMoves = getPossibleMoves(row, col, piece);
@@ -1121,12 +1119,12 @@
         function canSelectPiece(piece) {
             const whitePieces = Object.values(pieces.white);
             const blackPieces = Object.values(pieces.black);
-            if (gameState.currentTurn === 'white' && myColor === 'white') {
+
+            if (gameState.currentTurn === 'white') {
                 return whitePieces.includes(piece);
-            } else if (gameState.currentTurn === 'black' && myColor === 'black') {
+            } else {
                 return blackPieces.includes(piece);
             }
-            return false;
         }
 
         function makeMove(fromRow, fromCol, toRow, toCol) {
@@ -1211,17 +1209,22 @@
                 };
             }
 
-            connection.send(moveMessage);
+            if (connection && connection.open) {
+                connection.send(moveMessage);
+            }
+
             updateGameUI();
 
             if (winnerColor) {
                 const winnerName = winnerColor === 'white' ? gameState.white : gameState.black;
                 lastWinnerName = winnerName;
-                connection.send({
-                    type: 'gameOver',
-                    winnerColor: winnerColor,
-                    winnerName: winnerName
-                });
+                if (connection && connection.open) {
+                    connection.send({
+                        type: 'gameOver',
+                        winnerColor: winnerColor,
+                        winnerName: winnerName
+                    });
+                }
                 handleGameOver(winnerColor, true);
             } else if (timedGame) {
                 startClockForCurrentTurn();
@@ -1290,6 +1293,7 @@
             const moves = [];
             const isWhite = Object.values(pieces.white).includes(piece);
             const board = gameState.board;
+
             if (piece === pieces.white.pawn || piece === pieces.black.pawn) {
                 const direction = isWhite ? -1 : 1;
                 const startRow = isWhite ? 6 : 1;
@@ -1395,6 +1399,7 @@
                     }
                 }
             }
+
             const legalMoves = moves.filter(move => {
                 return !wouldBeInCheck(row, col, move.row, move.col, isWhite);
             });
@@ -1439,6 +1444,7 @@
         function getRawMoves(row, col, piece, board) {
             const moves = [];
             const isWhite = Object.values(pieces.white).includes(piece);
+
             if (piece === pieces.white.pawn || piece === pieces.black.pawn) {
                 const direction = isWhite ? -1 : 1;
                 [-1, 1].forEach(dc => {
@@ -1536,9 +1542,11 @@
                 blackTimeMs = 0;
             }
             stopClock();
-            connection.send({
-                type: 'reset'
-            });
+            if (connection && connection.open) {
+                connection.send({
+                    type: 'reset'
+                });
+            }
             updateGameUI();
             if (timedGame) startClockForCurrentTurn();
             showStatus('Game reset!');
@@ -1618,10 +1626,12 @@
             if (!lastWinnerName) return;
             const info = document.getElementById('winnerModalInfo');
             info.textContent = 'Zaproszenie do rewanżu wysłane. Czekaj na odpowiedź przeciwnika.';
-            connection.send({
-                type: 'rematchOffer',
-                winnerName: lastWinnerName
-            });
+            if (connection && connection.open) {
+                connection.send({
+                    type: 'rematchOffer',
+                    winnerName: lastWinnerName
+                });
+            }
         }
 
         function respondRematch(accepted) {
@@ -1629,11 +1639,13 @@
                 closeLoserModal();
                 return;
             }
-            connection.send({
-                type: 'rematchResponse',
-                accepted: accepted,
-                winnerName: pendingRematchFromWinner
-            });
+            if (connection && connection.open) {
+                connection.send({
+                    type: 'rematchResponse',
+                    accepted: accepted,
+                    winnerName: pendingRematchFromWinner
+                });
+            }
             if (!accepted) {
                 closeLoserModal();
                 showStatus('Odrzuciłeś propozycję rewanżu.');
@@ -1694,7 +1706,7 @@
             possibleMoves = [];
             stopClock();
 
-            if (isLocalInitiator) {
+            if (isLocalInitiator && connection && connection.open) {
                 connection.send({
                     type: 'newRound',
                     whiteName: whiteName,
@@ -1774,11 +1786,13 @@
             const winnerColor = loserColor === 'white' ? 'black' : 'white';
             const winnerName = winnerColor === 'white' ? gameState.white : gameState.black;
             lastWinnerName = winnerName;
-            connection.send({
-                type: 'gameOver',
-                winnerColor: winnerColor,
-                winnerName: winnerName
-            });
+            if (connection && connection.open) {
+                connection.send({
+                    type: 'gameOver',
+                    winnerColor: winnerColor,
+                    winnerName: winnerName
+                });
+            }
             handleGameOver(winnerColor, true);
             showStatus('Czas się skończył. Przegrana na czas.', true);
         }
