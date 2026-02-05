@@ -839,16 +839,10 @@
             lastActive: firebase.database.ServerValue.TIMESTAMP
         });
 
-        playerRef.onDisconnect().remove().then(() => {
-        console.log("OnDisconnect set successfully");
-    }).catch((err) => {
-        console.error("Could not set onDisconnect", err);
-    });
-
-    // Dodatkowe zabezpieczenie przy zamykaniu karty
-    window.addEventListener('beforeunload', () => {
-        playerRef.remove();
-    });
+    playerRef.onDisconnect().set(null);
+    window.onbeforeunload = function() {
+        playerRef.set(null);
+    };
 
         playersRef.on('value', snapshot => {
             const players = snapshot.val() || {};
