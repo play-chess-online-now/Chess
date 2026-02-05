@@ -833,6 +833,11 @@
         if (playerRef) playerRef.remove();
         playerRef = playersRef.child(playerId);
         invitesRef = db.ref('invites/' + playerId);
+        
+        playerRef.onDisconnect().remove();
+        window.onbeforeunload = function() {
+            playerRef.remove();
+        };
 
         playerRef.set({
             nickname: currentPlayer,
@@ -840,11 +845,6 @@
             inGame: false,
             lastActive: firebase.database.ServerValue.TIMESTAMP
         });
-
-    playerRef.onDisconnect().set(null);
-    window.onbeforeunload = function() {
-        playerRef.set(null);
-    };
 
         playersRef.on('value', snapshot => {
             const players = snapshot.val() || {};
