@@ -830,6 +830,7 @@
     function setupPresence() {
         playerId = localStorage.getItem('chess_player_id') || 'p-' + Math.random().toString(36).substr(2, 9);
         localStorage.setItem('chess_player_id', playerId);
+        if (playerRef) playerRef.remove();
         playerRef = playersRef.child(playerId);
         invitesRef = db.ref('invites/' + playerId);
 
