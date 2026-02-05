@@ -879,6 +879,7 @@
         Object.keys(players).forEach(id => {
             if (id === playerId) return;
             const p = players[id];
+	    if (!p.nickname) return;
             const li = document.createElement('li');
             li.className = 'player-item';
 
